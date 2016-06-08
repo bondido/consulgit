@@ -1,0 +1,41 @@
+global
+        {{key "haproxy/global"}}
+defaults
+        {{key "haproxy/defaults"}}
+
+frontend {{key "haproxy/frontend"}}
+
+{{range service}}
+{{with $service_name := .Name}}
+
+{{if key (printf "haproxy/backend/%s/service_name" $service_name)}}
+        acl hosthdr_{{$service_name}} hdr(host) -i {{key (printf "haproxy/backend/%s/host_hdr" $service_name)}}
+        use_backend {{$service_name}} if hosthdr_{{$service_name}}
+{{end}}
+{{end}}
+{{end}}
+
+#{{range tree "haproxy/backend"}}
+#{{with $dir := .}}
+#dir: {{$dir.Key}}
+#{{end}}
+#{{end}}
+
+
+{{range service}}
+{{with $service_name := .Name}}
+
+{{if key (printf "haproxy/backend/%s/service_name" $service_name)}}
+backend {{$service_name}}
+        mode http
+        balance roundrobin
+        option forwardfor
+        {{range service $service_name}}
+        server {{.Node}} {{.Address}}:{{.Port}}{{end}}
+{{end}}
+{{end}}
+{{end}}
+
+listen stats
+        {{key "haproxy/stats"}}
+
